@@ -3,17 +3,43 @@ local api = vim.api
 local WIDTH = 80
 
 local _window = nil
+local _buffers = nil
 
 --- Helpers ---
 
 local function list_buffers()
-	return vim.tbl_filter(function(b)
-		return api.nvim_buf_is_valid(b) and api.nvim_get_option_value("buflisted", { buf = b })
-	end, api.nvim_list_bufs())
+	return vim.tbl_map(
+		function(b)
+			return { handle = b, name = api.nvim_buf_get_name(b) }
+		end,
+		vim.tbl_filter(function(b)
+			return api.nvim_buf_is_valid(b) and api.nvim_get_option_value("buflisted", { buf = b })
+		end, api.nvim_list_bufs())
+	)
 end
 
 local function goto_buffer(buffer)
 	api.nvim_command("b " .. buffer)
+end
+
+local function string_with_length(string, length)
+	if string:len() > length then
+		local prefix = "..."
+		return prefix .. string:sub(-length + prefix:len())
+	else
+		return string .. string.rep("·", length - string:len())
+	end
+end
+
+local function pretty_buffer_name(buffer)
+	local current_directory = vim.fn.getcwd() .. "/"
+	local name = buffer.name
+
+	if name:sub(1, current_directory:len()) == current_directory then
+		name = name:sub(current_directory:len() + 1)
+	end
+
+	return string_with_length(name, WIDTH - 2) .. "··"
 end
 
 ---
@@ -22,6 +48,7 @@ local function close()
 	if _window ~= nil then
 		api.nvim_win_close(_window, true)
 		_window = nil
+		_buffers = nil
 	end
 end
 
@@ -84,10 +111,12 @@ local function open()
 	local lines = {}
 	local selected = nil
 
-	for i, b in pairs(list_buffers()) do
-		lines[i] = api.nvim_buf_get_name(b)
+	_buffers = list_buffers()
 
-		if b == current_buffer then
+	for i, buffer in pairs(_buffers) do
+		lines[i] = pretty_buffer_name(buffer)
+
+		if buffer.handle == current_buffer then
 			selected = i
 		end
 	end
@@ -99,21 +128,15 @@ local function open()
 end
 
 local function select()
-	local selected_name = api.nvim_get_current_line()
-	local selected = nil
-
-	for _, b in pairs(list_buffers()) do
-		local name = api.nvim_buf_get_name(b)
-		if name == selected_name then
-			selected = b
-			break
-		end
+	if _window == nil or _buffers == nil then
+		return
 	end
 
-	if selected ~= nil then
-		close()
-		goto_buffer(selected)
-	end
+	local row = api.nvim_win_get_cursor(_window)[1]
+	local selected = _buffers[row].handle
+
+	close()
+	goto_buffer(selected)
 end
 
 local function toggle()
