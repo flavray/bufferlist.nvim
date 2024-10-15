@@ -24,12 +24,12 @@ local function goto_buffer(buffer)
 	api.nvim_command("b " .. buffer)
 end
 
-local function string_with_length(string, length)
-	if string:len() > length then
+local function string_with_max_length(string, max_length)
+	if string:len() > max_length then
 		local prefix = "..."
-		return prefix .. string:sub(-length + prefix:len())
+		return prefix .. string:sub(-max_length + prefix:len())
 	else
-		return string .. string.rep("·", length - string:len())
+		return string
 	end
 end
 
@@ -41,7 +41,7 @@ local function pretty_buffer_name(buffer)
 		name = name:sub(current_directory:len() + 1)
 	end
 
-	return string_with_length(name, _options.width - 2) .. "··"
+	return string_with_max_length(name, _options.width)
 end
 
 ---
