@@ -1,6 +1,8 @@
 local api = vim.api
 
-local WIDTH = 80
+local _options = {
+	width = 80,
+}
 
 local _window = nil
 local _buffers = nil
@@ -39,10 +41,14 @@ local function pretty_buffer_name(buffer)
 		name = name:sub(current_directory:len() + 1)
 	end
 
-	return string_with_length(name, WIDTH - 2) .. "··"
+	return string_with_length(name, _options.width - 2) .. "··"
 end
 
 ---
+
+local function setup(options)
+	_options = vim.tbl_deep_extend("force", _options, options or {})
+end
 
 local function close()
 	if _window ~= nil then
@@ -69,9 +75,9 @@ local function create_window(buffer, selected_line)
 
 	local window_config = {
 		relative = "editor",
-		width = WIDTH,
+		width = _options.width,
 		height = ui.height - 20,
-		col = (ui.width / 2) - (WIDTH / 2),
+		col = (ui.width / 2) - (_options.width / 2),
 		row = 10,
 		style = "minimal",
 	}
@@ -147,4 +153,4 @@ local function toggle()
 	end
 end
 
-return { toggle = toggle, close = close, select = select }
+return { setup = setup, toggle = toggle, close = close, select = select }
